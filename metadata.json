@@ -1,0 +1,6 @@
+{
+  "name": "Mídia Kit Jessica Rosa",
+  "description": "Mídia Kit oficial, dinâmico e premium para a influenciadora digital Jessica Rosa com Bento Grid, métricas de engajamento e gestão de parcerias.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
