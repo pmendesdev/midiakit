@@ -20,13 +20,22 @@ export function getStoredSupabaseConfig(): SupabaseConfig | null {
     const metaEnv = (import.meta as any).env || {};
     const envUrl = metaEnv.VITE_SUPABASE_URL;
     const envKey = metaEnv.VITE_SUPABASE_ANON_KEY;
-    if (envUrl && envKey && String(envUrl).trim() !== '' && String(envKey).trim() !== '') {
-      return { url: String(envUrl).trim(), anonKey: String(envKey).trim() };
+    if (envUrl && envKey) {
+      const cleanUrl = String(envUrl).replace(/["']/g, '').trim();
+      const cleanKey = String(envKey).replace(/["']/g, '').trim();
+      if (cleanUrl !== '' && cleanKey !== '') {
+        return { url: cleanUrl, anonKey: cleanKey };
+      }
     }
     const stored = localStorage.getItem(SUPABASE_CONFIG_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed.url && parsed.anonKey) return parsed;
+      if (parsed.url && parsed.anonKey) {
+        return {
+          url: String(parsed.url).replace(/["']/g, '').trim(),
+          anonKey: String(parsed.anonKey).replace(/["']/g, '').trim(),
+        };
+      }
     }
   } catch (e) {
     console.error('Error reading Supabase config:', e);
@@ -185,4 +194,39 @@ export async function deletePartnership(id: string): Promise<{ success: boolean;
   const filtered = current.filter((item) => item.id !== id);
   saveLocalPartnerships(filtered);
   return { success: true, isRemote: false };
+}
+
+/**
+ * Bulk upload local partnerships to Supabase if table is empty or upon user action.
+ */
+export async function syncLocalToSupabase(): Promise<{ success: boolean; count: number; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, count: 0, error: 'Cliente Supabase não está configurado.' };
+  }
+
+  const localItems = getLocalPartnerships();
+  if (localItems.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  try {
+    const payload = localItems.map((item) => ({
+      brand_name: item.brand_name,
+      logo_url: item.logo_url,
+      campaign_description: item.campaign_description,
+      link: item.link || 'https://instagram.com/eujessicarosaa',
+      category: item.category || 'Maternidade & Família',
+    }));
+
+    const { data, error } = await client.from('partnerships').insert(payload).select();
+
+    if (error) {
+      return { success: false, count: 0, error: error.message };
+    }
+
+    return { success: true, count: data?.length || payload.length };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || 'Erro ao sincronizar com Supabase' };
+  }
 }

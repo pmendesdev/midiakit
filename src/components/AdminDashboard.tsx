@@ -28,6 +28,7 @@ import {
   deletePartnership,
   getStoredSupabaseConfig,
   saveStoredSupabaseConfig,
+  syncLocalToSupabase,
 } from '../lib/supabaseClient';
 import { useTheme } from '../context/ThemeContext';
 import { useAvatar } from '../context/AvatarContext';
@@ -237,6 +238,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       showToast(`Erro: ${err?.message}`, 'error');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSyncBulkToSupabase = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await syncLocalToSupabase();
+      if (res.success) {
+        showToast(`Sucesso! ${res.count} parceria(s) sincronizada(s) no Supabase com sucesso.`);
+        onPartnershipsChange();
+      } else {
+        showToast(`Falha ao sincronizar com Supabase: ${res.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Erro: ${err?.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -459,7 +477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               src={avatarUrl}
               alt="Foto de Perfil"
               referrerPolicy="no-referrer"
-              className="w-4 h-4 rounded-full object-cover ring-1 ring-rose-500/40"
+              className="w-4 h-4 rounded-full object-cover grayscale ring-1 ring-rose-500/40"
             />
             <span className="hidden sm:inline">Foto Perfil</span>
           </button>
@@ -521,8 +539,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Supabase Connection Diagnostic Banner */}
-      {!isRemote && (
+      {/* Supabase Connection Status & Diagnostic Banner */}
+      {isRemote ? (
+        <div
+          className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+            isDark ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-emerald-300 bg-emerald-50 text-emerald-900'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <div>
+              <p className="font-bold text-emerald-500">Supabase Conectado e Ativo</p>
+              <p className="mt-0.5 opacity-90">
+                Seus dados estão sendo lidos e salvos diretamente no banco PostgreSQL em nuvem.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSyncBulkToSupabase}
+            disabled={isSubmitting}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition-colors disabled:opacity-50"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Sincronizar Dados Locais para Supabase</span>
+          </button>
+        </div>
+      ) : (
         <div
           className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
             isDark ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-900'
@@ -538,13 +581,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowConfigModal(true)}
-            className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold cursor-pointer transition-colors"
-          >
-            Configurar Supabase via UI
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowConfigModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold cursor-pointer transition-colors"
+            >
+              Configurar Credenciais Supabase
+            </button>
+          </div>
         </div>
       )}
 

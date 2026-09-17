@@ -172,7 +172,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, on
                 src={avatarUrl}
                 alt="Foto atual"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-cover rounded-xl grayscale"
               />
             </div>
             <span className={`text-[11px] font-mono mt-1.5 block ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>

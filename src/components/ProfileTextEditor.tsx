@@ -191,7 +191,7 @@ export const ProfileTextEditor: React.FC<ProfileTextEditorProps> = ({ onSaved })
                 src={avatarUrl}
                 alt={name}
                 referrerPolicy="no-referrer"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover ring-2 ring-rose-200"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover grayscale ring-2 ring-rose-200"
               />
               <div className="absolute -bottom-1.5 -right-1.5 bg-white rounded-lg p-0.5 shadow-sm border border-slate-200">
                 <BadgeCheck className="w-4 h-4 text-sky-500 fill-sky-500/20" />

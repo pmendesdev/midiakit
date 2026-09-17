@@ -96,7 +96,7 @@ function AppContent() {
                 src={avatarUrl}
                 alt={profile.name}
                 referrerPolicy="no-referrer"
-                className="w-8 h-8 rounded-full object-cover ring-1.5 ring-rose-200/80"
+                className="w-8 h-8 rounded-full object-cover grayscale ring-1.5 ring-rose-200/80"
               />
               <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

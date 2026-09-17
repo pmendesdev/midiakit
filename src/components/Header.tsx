@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenContact }) => {
                 src={avatarUrl}
                 alt={profile.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-2xl transition-all duration-700 ease-out transform group-hover:scale-105"
+                className="w-full h-full object-cover rounded-2xl grayscale transition-all duration-700 ease-out transform group-hover:scale-105"
               />
               <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 dark:ring-white/10 pointer-events-none" />
 
