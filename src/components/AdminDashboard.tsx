@@ -43,6 +43,7 @@ interface AdminDashboardProps {
   onPartnershipsChange: () => void;
   onBackToPublic: () => void;
   isRemote: boolean;
+  remoteError?: string | null;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -50,6 +51,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onPartnershipsChange,
   onBackToPublic,
   isRemote,
+  remoteError,
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -518,6 +520,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Supabase Connection Diagnostic Banner */}
+      {!isRemote && (
+        <div
+          className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+            isDark ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-900'
+          }`}
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-500">Supabase não conectado (Modo Local Ativo)</p>
+              <p className="mt-0.5 opacity-90">
+                {remoteError ||
+                  'As variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não foram detectadas na Vercel.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowConfigModal(true)}
+            className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold cursor-pointer transition-colors"
+          >
+            Configurar Supabase via UI
+          </button>
+        </div>
+      )}
 
       {/* Navigation Tabs Bar */}
       <div className={`p-1.5 rounded-2xl border flex flex-wrap items-center justify-between gap-2 backdrop-blur-xl ${

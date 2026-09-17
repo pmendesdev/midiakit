@@ -26,15 +26,18 @@ function AppContent() {
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [isLoadingPartnerships, setIsLoadingPartnerships] = useState(true);
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsLoadingPartnerships(true);
     try {
-      const { data, isRemote } = await fetchPartnerships();
+      const { data, isRemote, error } = await fetchPartnerships();
       setPartnerships(data);
       setIsRemoteConnected(isRemote);
-    } catch (e) {
+      setRemoteError(error || null);
+    } catch (e: any) {
       console.error('Failed to load partnerships', e);
+      setRemoteError(e?.message || 'Erro inesperado ao conectar');
     } finally {
       setIsLoadingPartnerships(false);
     }
@@ -277,6 +280,7 @@ function AppContent() {
                 onPartnershipsChange={loadData}
                 onBackToPublic={() => setViewMode('public')}
                 isRemote={isRemoteConnected}
+                remoteError={remoteError}
               />
             </motion.div>
           )}

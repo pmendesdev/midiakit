@@ -11,9 +11,9 @@ export interface SupabaseConfig {
   anonKey: string;
 }
 
-// Fallback project credentials
-const DEFAULT_SUPABASE_URL = 'https://oupjtehvktrfjhtfrwar.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_-krVMB4T6I7oyyU4BSYPeQ_seiFc0Qg';
+// Fallback project credentials (vazio por padrão para evitar falsas conexões)
+const DEFAULT_SUPABASE_URL = '';
+const DEFAULT_SUPABASE_ANON_KEY = '';
 
 export function getStoredSupabaseConfig(): SupabaseConfig | null {
   try {
@@ -110,7 +110,11 @@ export async function fetchPartnerships(): Promise<{ data: Partnership[]; isRemo
   }
 
   // Local mode
-  return { data: getLocalPartnerships(), isRemote: false };
+  return {
+    data: getLocalPartnerships(),
+    isRemote: false,
+    error: 'Credenciais do Supabase não encontradas. Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas variáveis de ambiente da Vercel (e faça um Redeploy) ou configure no painel Admin.',
+  };
 }
 
 /**
