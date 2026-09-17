@@ -13,11 +13,13 @@ const AvatarContext = createContext<AvatarContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'jessica_rosa_custom_avatar';
 
+import { fetchSiteSettings, saveSiteSettings } from '../lib/supabaseClient';
+
 export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [avatarUrl, setAvatarUrlState] = useState<string>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && stored.startsWith('data:image/')) {
+      if (stored && (stored.startsWith('data:image/') || stored.startsWith('http'))) {
         return stored;
       }
     } catch {
@@ -25,6 +27,17 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     return INFLUENCER_PROFILE.avatarUrl;
   });
+
+  useEffect(() => {
+    fetchSiteSettings().then((res) => {
+      if (res.data?.avatar_url) {
+        setAvatarUrlState(res.data.avatar_url);
+        try {
+          localStorage.setItem(STORAGE_KEY, res.data.avatar_url);
+        } catch {}
+      }
+    });
+  }, []);
 
   const isCustomAvatar = avatarUrl !== INFLUENCER_PROFILE.avatarUrl;
 
@@ -35,6 +48,7 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (e) {
       console.warn('LocalStorage quota limit reached, keeping in memory:', e);
     }
+    saveSiteSettings({ avatar_url: dataUrl }).catch(console.error);
   };
 
   const resetAvatar = () => {
@@ -44,6 +58,7 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (e) {
       console.error(e);
     }
+    saveSiteSettings({ avatar_url: INFLUENCER_PROFILE.avatarUrl }).catch(console.error);
   };
 
   // Helper to read and optimize image file to avoid quota limits while maintaining crisp resolution

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { InfluencerProfile } from '../types';
 import { INFLUENCER_PROFILE } from '../data/influencerData';
+import { fetchSiteSettings, saveSiteSettings } from '../lib/supabaseClient';
 
 interface ProfileContextType {
   profile: InfluencerProfile;
@@ -78,6 +79,17 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthorized(logged);
   };
 
+  useEffect(() => {
+    fetchSiteSettings().then((res) => {
+      if (res.data?.profile) {
+        setProfileState(res.data.profile);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data.profile));
+        } catch {}
+      }
+    });
+  }, []);
+
   const checkAuth = () => {
     const status = checkAdminLogged();
     setIsAuthorized(status);
@@ -108,6 +120,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Failed to save profile to localStorage:', e);
       }
 
+      saveSiteSettings({ profile: newProfile }).catch(console.error);
       return newProfile;
     });
 
@@ -126,6 +139,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to remove custom profile from localStorage:', e);
     }
+    saveSiteSettings({ profile: INFLUENCER_PROFILE }).catch(console.error);
     return true;
   };
 

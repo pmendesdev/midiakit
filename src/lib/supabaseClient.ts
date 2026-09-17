@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Partnership } from '../types';
+import { Partnership, InfluencerProfile, CompanyLogo } from '../types';
 import { INITIAL_PARTNERSHIPS } from '../data/influencerData';
 
 // Local storage key for fallback persistence
@@ -196,8 +196,79 @@ export async function deletePartnership(id: string): Promise<{ success: boolean;
   return { success: true, isRemote: false };
 }
 
+export interface SiteSettingsPayload {
+  profile?: InfluencerProfile;
+  avatar_url?: string;
+  brand_logos?: CompanyLogo[];
+}
+
 /**
- * Bulk upload local partnerships to Supabase if table is empty or upon user action.
+ * Fetch remote site settings (profile bio, avatar, company logos) from Supabase table 'site_settings'
+ */
+export async function fetchSiteSettings(): Promise<{
+  data: SiteSettingsPayload | null;
+  isRemote: boolean;
+  error?: string;
+}> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'main')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Supabase site_settings fetch warning:', error.message);
+        return { data: null, isRemote: false, error: error.message };
+      }
+      return { data: data as SiteSettingsPayload | null, isRemote: true };
+    } catch (err: any) {
+      return { data: null, isRemote: false, error: err?.message };
+    }
+  }
+  return { data: null, isRemote: false };
+}
+
+/**
+ * Save or update remote site settings in Supabase table 'site_settings'
+ */
+export async function saveSiteSettings(
+  updated: SiteSettingsPayload
+): Promise<{ success: boolean; error?: string; isRemote: boolean }> {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { data: existing } = await client
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'main')
+        .maybeSingle();
+
+      const mergedPayload = {
+        id: 'main',
+        profile: updated.profile !== undefined ? updated.profile : (existing?.profile || null),
+        avatar_url: updated.avatar_url !== undefined ? updated.avatar_url : (existing?.avatar_url || null),
+        brand_logos: updated.brand_logos !== undefined ? updated.brand_logos : (existing?.brand_logos || null),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await client.from('site_settings').upsert(mergedPayload);
+      if (error) {
+        console.warn('Error saving site_settings to Supabase:', error.message);
+        return { success: false, error: error.message, isRemote: true };
+      }
+      return { success: true, isRemote: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message, isRemote: true };
+    }
+  }
+  return { success: false, error: 'Supabase não configurado', isRemote: false };
+}
+
+/**
+ * Bulk upload local partnerships and settings to Supabase
  */
 export async function syncLocalToSupabase(): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient();
@@ -206,26 +277,42 @@ export async function syncLocalToSupabase(): Promise<{ success: boolean; count: 
   }
 
   const localItems = getLocalPartnerships();
-  if (localItems.length === 0) {
-    return { success: true, count: 0 };
-  }
-
   try {
-    const payload = localItems.map((item) => ({
-      brand_name: item.brand_name,
-      logo_url: item.logo_url,
-      campaign_description: item.campaign_description,
-      link: item.link || 'https://instagram.com/eujessicarosaa',
-      category: item.category || 'Maternidade & Família',
-    }));
+    let count = 0;
+    if (localItems.length > 0) {
+      const payload = localItems.map((item) => ({
+        brand_name: item.brand_name,
+        logo_url: item.logo_url,
+        campaign_description: item.campaign_description,
+        link: item.link || 'https://instagram.com/eujessicarosaa',
+        category: item.category || 'Maternidade & Família',
+      }));
 
-    const { data, error } = await client.from('partnerships').insert(payload).select();
-
-    if (error) {
-      return { success: false, count: 0, error: error.message };
+      const { data, error } = await client.from('partnerships').insert(payload).select();
+      if (error) {
+        return { success: false, count: 0, error: error.message };
+      }
+      count = data?.length || payload.length;
     }
 
-    return { success: true, count: data?.length || payload.length };
+    // Also sync site_settings from localStorage if available
+    try {
+      const storedProfile = localStorage.getItem('jessica_rosa_custom_profile');
+      const storedAvatar = localStorage.getItem('jessica_rosa_custom_avatar');
+      const storedLogos = localStorage.getItem('jessica_rosa_company_logos');
+
+      if (storedProfile || storedAvatar || storedLogos) {
+        await saveSiteSettings({
+          profile: storedProfile ? JSON.parse(storedProfile) : undefined,
+          avatar_url: storedAvatar || undefined,
+          brand_logos: storedLogos ? JSON.parse(storedLogos) : undefined,
+        });
+      }
+    } catch (e) {
+      console.warn('Error pushing local settings to Supabase:', e);
+    }
+
+    return { success: true, count };
   } catch (err: any) {
     return { success: false, count: 0, error: err?.message || 'Erro ao sincronizar com Supabase' };
   }

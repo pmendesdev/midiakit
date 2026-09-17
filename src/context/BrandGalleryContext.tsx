@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CompanyLogo } from '../types';
 import { INITIAL_COMPANY_LOGOS } from '../data/companyLogosData';
+import { fetchSiteSettings, saveSiteSettings } from '../lib/supabaseClient';
 
 interface BrandGalleryContextType {
   companies: CompanyLogo[];
@@ -31,13 +32,26 @@ export const BrandGalleryProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return INITIAL_COMPANY_LOGOS;
   });
 
-  // Persist to local storage whenever modified
+  // Load from Supabase on mount
+  useEffect(() => {
+    fetchSiteSettings().then((res) => {
+      if (Array.isArray(res.data?.brand_logos) && res.data.brand_logos.length > 0) {
+        setCompanies(res.data.brand_logos);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data.brand_logos));
+        } catch {}
+      }
+    });
+  }, []);
+
+  // Persist to local storage and Supabase whenever modified
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(companies));
     } catch (e) {
       console.warn('LocalStorage quota limit reached for company logos:', e);
     }
+    saveSiteSettings({ brand_logos: companies }).catch(console.error);
   }, [companies]);
 
   const addCompany = (newCompany: Omit<CompanyLogo, 'id'>): string => {

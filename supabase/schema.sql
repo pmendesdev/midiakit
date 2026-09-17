@@ -3,7 +3,7 @@
 -- Execute este script no SQL Editor do seu projeto Supabase (https://supabase.com)
 -- ==============================================================================
 
--- 1. Criar a tabela de parcerias e campanhas
+-- 1. Tabela de parcerias e campanhas
 CREATE TABLE IF NOT EXISTS public.partnerships (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     brand_name TEXT NOT NULL,
@@ -14,28 +14,44 @@ CREATE TABLE IF NOT EXISTS public.partnerships (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Habilitar Row Level Security (RLS)
+-- 2. Tabela de configurações globais (Perfil, Foto e Logos de Empresas para Sincronização Multi-Dispositivo)
+CREATE TABLE IF NOT EXISTS public.site_settings (
+    id TEXT PRIMARY KEY DEFAULT 'main',
+    profile JSONB,
+    avatar_url TEXT,
+    brand_logos JSONB,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. Habilitar Row Level Security (RLS)
 ALTER TABLE public.partnerships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 
--- 3. Políticas de Segurança (RLS)
--- Permitir que visitantes visualizem todas as parcerias
+-- 4. Remover políticas antigas se existirem
+DROP POLICY IF EXISTS "Visualização pública de parcerias" ON public.partnerships;
+DROP POLICY IF EXISTS "Gerenciamento de parcerias" ON public.partnerships;
+DROP POLICY IF EXISTS "Visualização pública de configurações" ON public.site_settings;
+DROP POLICY IF EXISTS "Gerenciamento de configurações" ON public.site_settings;
+
+-- 5. Políticas para a tabela partnerships
 CREATE POLICY "Visualização pública de parcerias"
-ON public.partnerships
-FOR SELECT
-USING (true);
+ON public.partnerships FOR SELECT USING (true);
 
--- Permitir inserção, alteração e exclusão para usuários com a chave anônima/autenticados
 CREATE POLICY "Gerenciamento de parcerias"
-ON public.partnerships
-FOR ALL
-USING (true)
-WITH CHECK (true);
+ON public.partnerships FOR ALL USING (true) WITH CHECK (true);
 
--- 4. Índice de performance
+-- 6. Políticas para a tabela site_settings
+CREATE POLICY "Visualização pública de configurações"
+ON public.site_settings FOR SELECT USING (true);
+
+CREATE POLICY "Gerenciamento de configurações"
+ON public.site_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. Índice de performance
 CREATE INDEX IF NOT EXISTS idx_partnerships_created_at 
 ON public.partnerships (created_at DESC);
 
--- 5. Inserir dados iniciais de exemplo (opcional)
+-- 8. Inserir dados iniciais de exemplo (opcional)
 INSERT INTO public.partnerships (brand_name, logo_url, campaign_description, link, category)
 VALUES
   ('Pampers', 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80', 'Campanha de fraldas Premium Care e rotina noturna do bebê', 'https://instagram.com', 'Maternidade'),
