@@ -11,8 +11,8 @@ export interface SupabaseConfig {
   anonKey: string;
 }
 
-// Fallback project credentials (vazio por padrão para evitar falsas conexões)
-const DEFAULT_SUPABASE_URL = '';
+// Fallback project credentials
+const DEFAULT_SUPABASE_URL = 'https://mhmbhlwrckhizsineohk.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = '';
 
 export function getStoredSupabaseConfig(): SupabaseConfig | null {
