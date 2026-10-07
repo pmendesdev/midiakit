@@ -13,7 +13,7 @@ export interface SupabaseConfig {
 
 // Fallback project credentials
 const DEFAULT_SUPABASE_URL = 'https://mhmbhlwrckhizsineohk.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = '';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_YolaCI1oFf3fcO2hflfTXw_C5Up_Gp9';
 
 export function getStoredSupabaseConfig(): SupabaseConfig | null {
   try {
