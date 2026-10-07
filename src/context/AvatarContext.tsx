@@ -1,19 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { INFLUENCER_PROFILE } from '../data/influencerData';
+import { fetchSiteSettings, saveSiteSettings } from '../lib/supabaseClient';
 
 interface AvatarContextType {
   avatarUrl: string;
   isCustomAvatar: boolean;
-  setCustomAvatar: (dataUrl: string) => void;
-  resetAvatar: () => void;
+  setCustomAvatar: (dataUrl: string) => Promise<{ success: boolean; error?: string }>;
+  resetAvatar: () => Promise<{ success: boolean; error?: string }>;
   processAndSaveImageFile: (file: File) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AvatarContext = createContext<AvatarContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'jessica_rosa_custom_avatar';
-
-import { fetchSiteSettings, saveSiteSettings } from '../lib/supabaseClient';
 
 export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [avatarUrl, setAvatarUrlState] = useState<string>(() => {
@@ -41,27 +40,36 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const isCustomAvatar = avatarUrl !== INFLUENCER_PROFILE.avatarUrl;
 
-  const setCustomAvatar = (dataUrl: string) => {
+  const setCustomAvatar = async (dataUrl: string): Promise<{ success: boolean; error?: string }> => {
     setAvatarUrlState(dataUrl);
     try {
       localStorage.setItem(STORAGE_KEY, dataUrl);
     } catch (e) {
       console.warn('LocalStorage quota limit reached, keeping in memory:', e);
     }
-    saveSiteSettings({ avatar_url: dataUrl }).catch(console.error);
+    const res = await saveSiteSettings({ avatar_url: dataUrl });
+    if (res.error) {
+      console.warn('Supabase save error for avatar:', res.error);
+      return { success: false, error: res.error };
+    }
+    return { success: true };
   };
 
-  const resetAvatar = () => {
+  const resetAvatar = async (): Promise<{ success: boolean; error?: string }> => {
     setAvatarUrlState(INFLUENCER_PROFILE.avatarUrl);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
       console.error(e);
     }
-    saveSiteSettings({ avatar_url: INFLUENCER_PROFILE.avatarUrl }).catch(console.error);
+    const res = await saveSiteSettings({ avatar_url: INFLUENCER_PROFILE.avatarUrl });
+    if (res.error) {
+      return { success: false, error: res.error };
+    }
+    return { success: true };
   };
 
-  // Helper to read and optimize image file to avoid quota limits while maintaining crisp resolution
+  // Helper to read and optimize image file to avoid quota limits while maintaining crisp resolution on all devices
   const processAndSaveImageFile = (file: File): Promise<{ success: boolean; error?: string }> => {
     return new Promise((resolve) => {
       if (!file.type.startsWith('image/')) {
@@ -82,10 +90,10 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         }
 
-        // Optimize image with canvas
+        // Optimize image with canvas (500px max dimension, 0.8 JPEG quality for fast mobile uploads)
         const img = new Image();
-        img.onload = () => {
-          const maxDimension = 900;
+        img.onload = async () => {
+          const maxDimension = 500;
           let width = img.width;
           let height = img.height;
 
@@ -104,15 +112,15 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            setCustomAvatar(result);
-            resolve({ success: true });
+            const saveRes = await setCustomAvatar(result);
+            resolve(saveRes);
             return;
           }
 
           ctx.drawImage(img, 0, 0, width, height);
-          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          setCustomAvatar(optimizedDataUrl);
-          resolve({ success: true });
+          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          const saveRes = await setCustomAvatar(optimizedDataUrl);
+          resolve(saveRes);
         };
 
         img.onerror = () => {

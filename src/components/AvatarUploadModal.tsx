@@ -68,13 +68,17 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, on
     setErrorMessage(null);
 
     const testImg = new Image();
-    testImg.onload = () => {
-      setCustomAvatar(trimmed);
+    testImg.onload = async () => {
+      const saveRes = await setCustomAvatar(trimmed);
       setIsApplyingUrl(false);
-      setSuccessMessage('Foto de perfil atualizada com sucesso!');
-      setTimeout(() => {
-        onClose();
-      }, 1200);
+      if (saveRes.success) {
+        setSuccessMessage('Foto de perfil atualizada e salva no Supabase!');
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMessage(saveRes.error || 'Erro ao salvar a imagem no Supabase.');
+      }
     };
     testImg.onerror = () => {
       setIsApplyingUrl(false);
@@ -292,10 +296,14 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, on
           <div className="flex items-center justify-center pt-1 text-xs">
             <button
               type="button"
-              onClick={() => {
-                resetAvatar();
-                setSuccessMessage('Foto original restaurada!');
-                setTimeout(() => onClose(), 1000);
+              onClick={async () => {
+                const res = await resetAvatar();
+                if (res.success) {
+                  setSuccessMessage('Foto original restaurada e salva no Supabase!');
+                  setTimeout(() => onClose(), 1000);
+                } else {
+                  setErrorMessage(res.error || 'Erro ao restaurar no Supabase.');
+                }
               }}
               className="text-rose-500 hover:text-rose-600 font-medium flex items-center gap-1.5 cursor-pointer hover:underline"
             >
