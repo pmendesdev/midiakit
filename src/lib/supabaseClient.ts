@@ -101,6 +101,15 @@ export function saveLocalPartnerships(items: Partnership[]) {
 }
 
 /**
+ * Helper to check if a string is a valid PostgreSQL UUID
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidUUID(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
+/**
  * Unified data fetcher for partnerships.
  * If Supabase is connected, queries Supabase table 'partnerships'.
  * Otherwise, falls back smoothly to local storage mock database.
@@ -172,6 +181,7 @@ export async function createPartnership(
             logo_url: newEntry.logo_url,
             campaign_description: newEntry.campaign_description,
             link: newEntry.link,
+            category: newEntry.category || 'Maternidade & Família',
           },
         ])
         .select()
@@ -201,10 +211,11 @@ export async function createPartnership(
 
 /**
  * Delete partnership by ID.
+ * Validates UUID format to prevent PostgreSQL 22P02 type errors.
  */
 export async function deletePartnership(id: string): Promise<{ success: boolean; error?: string; isRemote: boolean }> {
   const client = getSupabaseClient();
-  if (client && !id.startsWith('local-')) {
+  if (client && isValidUUID(id)) {
     try {
       const { error } = await client.from('partnerships').delete().eq('id', id);
       if (error) {
@@ -216,7 +227,7 @@ export async function deletePartnership(id: string): Promise<{ success: boolean;
     }
   }
 
-  // Local delete
+  // Local delete fallback for non-UUID / demo IDs
   const current = getLocalPartnerships();
   const filtered = current.filter((item) => item.id !== id);
   saveLocalPartnerships(filtered);
@@ -262,7 +273,20 @@ export async function fetchSiteSettings(): Promise<{
         return { data: initialPayload, isRemote: true };
       }
 
-      return { data: data as SiteSettingsPayload | null, isRemote: true };
+      let profile = data.profile ? { ...data.profile } : undefined;
+      if (profile) {
+        if (profile.age !== undefined) profile.age = Number(profile.age) || 28;
+        if (profile.sonAge !== undefined) profile.sonAge = Number(profile.sonAge) || 7;
+      }
+
+      return {
+        data: {
+          profile,
+          avatar_url: data.avatar_url,
+          brand_logos: data.brand_logos,
+        },
+        isRemote: true,
+      };
     } catch (err: any) {
       return { data: null, isRemote: false, error: err?.message };
     }
