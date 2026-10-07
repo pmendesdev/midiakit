@@ -28,10 +28,19 @@ export function getStoredSupabaseConfig(): SupabaseConfig | null {
         return { url: cleanUrl, anonKey: cleanKey };
       }
     }
+
+    if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_ANON_KEY) {
+      const cleanDefaultUrl = String(DEFAULT_SUPABASE_URL).replace(/["']/g, '').trim();
+      const cleanDefaultKey = String(DEFAULT_SUPABASE_ANON_KEY).replace(/["']/g, '').trim();
+      if (cleanDefaultUrl !== '' && cleanDefaultKey !== '') {
+        return { url: cleanDefaultUrl, anonKey: cleanDefaultKey };
+      }
+    }
+
     const stored = localStorage.getItem(SUPABASE_CONFIG_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed.url && parsed.anonKey) {
+      if (parsed.url && parsed.anonKey && String(parsed.url).trim() !== '' && String(parsed.anonKey).trim() !== '') {
         return {
           url: String(parsed.url).replace(/["']/g, '').trim(),
           anonKey: String(parsed.anonKey).replace(/["']/g, '').trim(),
@@ -40,9 +49,6 @@ export function getStoredSupabaseConfig(): SupabaseConfig | null {
     }
   } catch (e) {
     console.error('Error reading Supabase config:', e);
-  }
-  if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_ANON_KEY) {
-    return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
   }
   return null;
 }
