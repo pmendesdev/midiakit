@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Partnership, InfluencerProfile, CompanyLogo } from '../types';
-import { INITIAL_PARTNERSHIPS } from '../data/influencerData';
+import { INITIAL_PARTNERSHIPS, INFLUENCER_PROFILE } from '../data/influencerData';
+import { INITIAL_COMPANY_LOGOS } from '../data/companyLogosData';
 
 // Local storage key for fallback persistence
 const LOCAL_STORAGE_KEY = 'jessica_rosa_partnerships_v1';
@@ -111,6 +112,26 @@ export async function fetchPartnerships(): Promise<{ data: Partnership[]; isRemo
         console.warn('Supabase fetch error, falling back to local:', error.message);
         return { data: getLocalPartnerships(), isRemote: false, error: error.message };
       }
+
+      if (!data || data.length === 0) {
+        // Auto-seed initial partnerships in Supabase if table is empty
+        try {
+          const payload = INITIAL_PARTNERSHIPS.map((item) => ({
+            brand_name: item.brand_name,
+            logo_url: item.logo_url,
+            campaign_description: item.campaign_description,
+            link: item.link || 'https://instagram.com/eujessicarosaa',
+            category: item.category || 'Maternidade & Família',
+          }));
+          const { data: seeded } = await client.from('partnerships').insert(payload).select();
+          if (seeded && seeded.length > 0) {
+            return { data: seeded as Partnership[], isRemote: true };
+          }
+        } catch (seedErr) {
+          console.warn('Auto-seed partnerships error:', seedErr);
+        }
+      }
+
       return { data: (data as Partnership[]) || [], isRemote: true };
     } catch (err: any) {
       console.warn('Exception during Supabase fetch:', err);
@@ -223,6 +244,18 @@ export async function fetchSiteSettings(): Promise<{
         console.warn('Supabase site_settings fetch warning:', error.message);
         return { data: null, isRemote: false, error: error.message };
       }
+
+      if (!data) {
+        // Auto-seed site_settings in Supabase if empty
+        const initialPayload = {
+          profile: INFLUENCER_PROFILE,
+          avatar_url: INFLUENCER_PROFILE.avatarUrl,
+          brand_logos: INITIAL_COMPANY_LOGOS,
+        };
+        await saveSiteSettings(initialPayload);
+        return { data: initialPayload, isRemote: true };
+      }
+
       return { data: data as SiteSettingsPayload | null, isRemote: true };
     } catch (err: any) {
       return { data: null, isRemote: false, error: err?.message };
